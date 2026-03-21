@@ -23,4 +23,4 @@ This script automatically updates Windows folder icons by picking a random image
 
 ## Usage
 1. Place `set_icons.py` in the root directory.
-2. Run `run_icon_set.bat` or `python set_icons.py`.
+2. Run `run.bat` or `python set_icons.py`.
