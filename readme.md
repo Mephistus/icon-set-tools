@@ -2,8 +2,9 @@
 
 This script automatically updates Windows folder icons by picking a random image from within each subfolder. It crops the image to a square, converts it to a high-quality `.ico` file, and handles the `desktop.ini` configuration and file attributes automatically.
 
-## Preview
+## Before
 ![Before](screenshots/ss1.jpg)
+## After
 ![After](screenshots/ss2.jpg)
 
 ## How it Works
@@ -17,8 +18,9 @@ This script automatically updates Windows folder icons by picking a random image
 * **Windows OS**
 * **Python 3.x**
 * **Pillow (PIL)**
-  `pip install Pillow`
+
+  ```pip install Pillow```
 
 ## Usage
 1. Place `set_icons.py` in the root directory.
-2. Run `run_icon_set.bat` or `python set_icons.py`.
+2. Run `run.bat` or `python set_icons.py`.
