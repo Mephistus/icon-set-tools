@@ -1,12 +1,27 @@
 import os
 import random
+import argparse
 import ctypes
 from PIL import Image
 
 # This gets the folder where the script is saved
 AUTO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-def set_folder_icon(folder_path):
+def set_folder_icon(folder_path, reroll=False):
+    icon_path = os.path.join(folder_path, "folder_icon.ico")
+
+    # By default, preserve thumbnails that were already generated.
+    if not reroll and os.path.isfile(icon_path):
+        return False
+
+    # Find an image before removing the current icon. This avoids leaving a
+    # folder without an icon when it has no supported images.
+    valid_extensions = ('.jpg', '.jpeg', '.png', '.bmp')
+    images = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
+
+    if not images:
+        return False
+
     # --- STEP 0: CLEANUP PREVIOUS ICON ---
     for extra_file in ["folder_icon.ico", "desktop.ini"]:
         path = os.path.join(folder_path, extra_file)
@@ -15,14 +30,7 @@ def set_folder_icon(folder_path):
             os.remove(path)
 
     # --- STEP 1: FIND A NEW RANDOM IMAGE ---
-    valid_extensions = ('.jpg', '.jpeg', '.png', '.bmp')
-    images = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
-    
-    if not images:
-        return
-
     random_img_path = os.path.join(folder_path, random.choice(images))
-    icon_path = os.path.join(folder_path, "folder_icon.ico")
 
     # --- STEP 2: PROCESS IMAGE ---
     with Image.open(random_img_path) as img:
@@ -57,7 +65,17 @@ def set_folder_icon(folder_path):
     ctypes.windll.kernel32.SetFileAttributesW(folder_path, 0x01)      # Read-Only flag
 
 # --- EXECUTION ---
+parser = argparse.ArgumentParser(description="Generate icons for folders with images.")
+parser.add_argument(
+    "-r",
+    "--reroll",
+    action="store_true",
+    help="regenerate thumbnails even when a folder already has one",
+)
+args = parser.parse_args()
+
 print(f"Working in: {AUTO_ROOT}")
+print("Mode: reroll existing thumbnails" if args.reroll else "Mode: preserve existing thumbnails")
 
 for folder in os.listdir(AUTO_ROOT):
     full_path = os.path.join(AUTO_ROOT, folder)
@@ -65,8 +83,12 @@ for folder in os.listdir(AUTO_ROOT):
     # We ignore the script itself and any other files
     if os.path.isdir(full_path):
         try:
-            set_folder_icon(full_path)
-            print(f"Rerolled icon for: {folder}")
+            generated = set_folder_icon(full_path, reroll=args.reroll)
+            if generated:
+                action = "Rerolled" if args.reroll else "Created"
+                print(f"{action} icon for: {folder}")
+            else:
+                print(f"Skipped (thumbnail already exists or no images): {folder}")
         except Exception as e:
             print(f"Failed {folder}: {e}")
 
