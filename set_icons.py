@@ -7,6 +7,27 @@ from PIL import Image
 # This gets the folder where the script is saved
 AUTO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+def iter_folders(root, deep=False):
+    if deep:
+        for current_root, folders, _ in os.walk(root, followlinks=False):
+            # Avoid linked directories that could lead outside the tree or loop.
+            folders[:] = [
+                folder for folder in folders
+                if not os.path.islink(os.path.join(current_root, folder))
+                and not (
+                    getattr(os.path, "isjunction", lambda path: False)(
+                        os.path.join(current_root, folder)
+                    )
+                )
+            ]
+            for folder in folders:
+                yield os.path.join(current_root, folder)
+    else:
+        for folder in os.listdir(root):
+            full_path = os.path.join(root, folder)
+            if os.path.isdir(full_path):
+                yield full_path
+
 def set_folder_icon(folder_path, reroll=False):
     icon_path = os.path.join(folder_path, "folder_icon.ico")
 
@@ -63,9 +84,16 @@ def set_folder_icon(folder_path, reroll=False):
     ctypes.windll.kernel32.SetFileAttributesW(icon_path, 0x02 | 0x04) # Hidden + System
     ctypes.windll.kernel32.SetFileAttributesW(ini_path, 0x02 | 0x04)  # Hidden + System
     ctypes.windll.kernel32.SetFileAttributesW(folder_path, 0x01)      # Read-Only flag
+    return True
 
 # --- EXECUTION ---
 parser = argparse.ArgumentParser(description="Generate icons for folders with images.")
+parser.add_argument(
+    "-d",
+    "--deep",
+    action="store_true",
+    help="process all nested subfolders recursively",
+)
 parser.add_argument(
     "-r",
     "--reroll",
@@ -76,21 +104,19 @@ args = parser.parse_args()
 
 print(f"Working in: {AUTO_ROOT}")
 print("Mode: reroll existing thumbnails" if args.reroll else "Mode: preserve existing thumbnails")
+print("Scope: all nested subfolders" if args.deep else "Scope: immediate subfolders")
 
-for folder in os.listdir(AUTO_ROOT):
-    full_path = os.path.join(AUTO_ROOT, folder)
-    
-    # We ignore the script itself and any other files
-    if os.path.isdir(full_path):
-        try:
-            generated = set_folder_icon(full_path, reroll=args.reroll)
-            if generated:
-                action = "Rerolled" if args.reroll else "Created"
-                print(f"{action} icon for: {folder}")
-            else:
-                print(f"Skipped (thumbnail already exists or no images): {folder}")
-        except Exception as e:
-            print(f"Failed {folder}: {e}")
+for full_path in iter_folders(AUTO_ROOT, deep=args.deep):
+    folder = os.path.relpath(full_path, AUTO_ROOT)
+    try:
+        generated = set_folder_icon(full_path, reroll=args.reroll)
+        if generated:
+            action = "Rerolled" if args.reroll else "Created"
+            print(f"{action} icon for: {folder}")
+        else:
+            print(f"Skipped (thumbnail already exists or no images): {folder}")
+    except Exception as e:
+        print(f"Failed {folder}: {e}")
 
 # Final step: Force Windows to refresh the icons
 ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)

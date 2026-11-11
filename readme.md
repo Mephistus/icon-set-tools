@@ -24,3 +24,13 @@ This script automatically updates Windows folder icons by picking a random image
 ## Usage
 1. Place `set_icons.py` in the root directory.
 2. Run `run.bat` or `python set_icons.py`.
+
+By default, only immediate subfolders are processed, and existing icons are preserved.
+
+* `python set_icons.py -d` (or `--deep`): process all nested subfolders at every depth.
+* `python set_icons.py -r` (or `--reroll`): regenerate existing icons.
+* `python set_icons.py -d -r`: regenerate icons throughout the folder tree.
+
+Each folder uses images directly inside it. Folders without supported images are skipped,
+but deep mode still visits their subfolders. Deep mode skips symbolic links and directory
+junctions to avoid loops.
